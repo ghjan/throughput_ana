@@ -1,4 +1,4 @@
-package createlog
+package main
 
 import (
 	"flag"
