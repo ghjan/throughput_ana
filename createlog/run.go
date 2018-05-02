@@ -98,8 +98,8 @@ time=2018%2F5%2F2+%E4%B8%8B%E5%8D%8810%3A30%3A51
 func makeLog(currentUrl, referUrl, ua string) string {
 	u := url.Values{}
 	time := time.Now()
-	time1 := time.Format("02/May/2018:14:31:11 +0000")
-	time2 := time.Format("2018/May/02+14:31:11 +0000")
+	time1 := time.Format("02/Jan/2006:15:04:05 +0000")
+	time2 := time.Format("2006-01-02 15:04:05 +0000")
 	u.Set("time", time2)
 	u.Set("url", currentUrl)
 	u.Set("refer", referUrl)
