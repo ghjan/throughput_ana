@@ -4,11 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-	"os"
-	"net/url"
 )
 
 type resource struct {
@@ -97,14 +97,16 @@ time=2018%2F5%2F2+%E4%B8%8B%E5%8D%8810%3A30%3A51
 */
 func makeLog(currentUrl, referUrl, ua string) string {
 	u := url.Values{}
-	u.Set("time", "1")
+	time := time.Now()
+	time1 := time.Format("02/May/2018:14:31:11 +0000")
+	time2 := time.Format("2018/May/02+14:31:11 +0000")
+	u.Set("time", time2)
 	u.Set("url", currentUrl)
 	u.Set("refer", referUrl)
 	u.Set("ua", ua)
 	paramsStr := u.Encode()
-	time := time.Now().Format("dd/mm/yyyy:hh:mm:ss")
 	logTemplate := `localhost - - [{$time}] "OPTIONS /dig?{$paramsStr} 200 43 "-" {$ua} "-"`
-	log := strings.Replace(logTemplate, "{$time}", time, -1)
+	log := strings.Replace(logTemplate, "{$time}", time1, -1)
 	log = strings.Replace(log, "{$paramsStr}", paramsStr, -1)
 	//log = strings.Replace(log, "{$currentUrl}", currentUrl, -1)
 	//log = strings.Replace(log, "{$referUrl}", referUrl, -1)
