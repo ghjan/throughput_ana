@@ -73,7 +73,7 @@ func main() {
 		currentUrl := list[randInt(0, len(list)-1)]
 		referUrl := list[randInt(0, len(list)-1)]
 		ua := UAs[randInt(0, len(UAs)-1)]
-		logStr += makeLog(currentUrl, referUrl, ua)
+		logStr = logStr + makeLog(currentUrl, referUrl, ua) + "\n"
 	}
 	fd, _ := os.OpenFile(*filePath, os.O_RDWR|os.O_APPEND, 0644)
 	fd.Write([]byte(logStr))
