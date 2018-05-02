@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"os"
+	"net/url"
 )
 
 type resource struct {
@@ -66,7 +67,6 @@ func main() {
 	// 需要构造出真实的网站url集合
 	res := ruleResource()
 	list := buildUrl(res)
-	fmt.Println(list)
 	// 按照要求， 生成 $total行日志内容， 源自于的这个集合
 	logStr := ""
 	for i := 0; i <= *total; i++ {
@@ -96,18 +96,19 @@ time=2018%2F5%2F2+%E4%B8%8B%E5%8D%8810%3A30%3A51
 "-"
 */
 func makeLog(currentUrl, referUrl, ua string) string {
-	//u := url.Values{}
-	//u.Set("time", "1")
-	//u.Set("url", currentUrl)
-	//u.Set("refer", referUrl)
-	//u.Set("ua", ua)
-	//paramsStr := u.Encode()
-	time := time.Now().Format("[dd/mm/yyyy:hh:mm:ss]")
-	logTemplate := `localhost - - [02/May/2018:14:31:11 +0000] "OPTIONS /dig?time={$time}&url={$currentUrl}&refer={$referUrl}&ua={$us} 200 43 "-" {$ua} "-"`
+	u := url.Values{}
+	u.Set("time", "1")
+	u.Set("url", currentUrl)
+	u.Set("refer", referUrl)
+	u.Set("ua", ua)
+	paramsStr := u.Encode()
+	time := time.Now().Format("dd/mm/yyyy:hh:mm:ss")
+	logTemplate := `localhost - - [{$time}] "OPTIONS /dig?{$paramsStr} 200 43 "-" {$ua} "-"`
 	log := strings.Replace(logTemplate, "{$time}", time, -1)
-	log = strings.Replace(logTemplate, "{$currentUrl}", currentUrl, -1)
-	log = strings.Replace(logTemplate, "{$referUrl}", referUrl, -1)
-	log = strings.Replace(logTemplate, "{$ua}", ua, -1)
+	log = strings.Replace(log, "{$paramsStr}", paramsStr, -1)
+	//log = strings.Replace(log, "{$currentUrl}", currentUrl, -1)
+	//log = strings.Replace(log, "{$referUrl}", referUrl, -1)
+	log = strings.Replace(log, "{$ua}", ua, -1)
 	return log
 }
 
