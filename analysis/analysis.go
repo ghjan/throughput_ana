@@ -15,6 +15,7 @@ import (
 	"github.com/mgutz/str"
 	"github.com/sirupsen/logrus"
 	"strconv"
+	"fmt"
 )
 
 const (
@@ -65,13 +66,17 @@ var redisCli redis.Client
 func init() {
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
-	redisCli, err := redis.Dial("tcp", "localhost:6379")
+	redisCli, err := dial()
 	if err != nil {
 		log.Fatalln("Redis connect failed!")
 	} else {
 		defer redisCli.Close()
 	}
+}
 
+func dial() (*redis.Client, error) {
+	client, err := redis.DialTimeout("tcp", "127.0.0.1:6379", 10*time.Second)
+	return client, err
 }
 
 func main() {
@@ -218,9 +223,11 @@ func pvCounter(pvChannel chan urlData, storageChannel chan storageBlock) {
 //user 需要去重
 func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock) {
 	for data := range uvChannel {
-		//Hyperloglog redis
+		//HyperLoglog redis
 		hyperLogLogKey := "uv_hpll_" + getTime(data.data.time, "day")
+		fmt.Printf("hyperLogLogKey:%s, uid:%s", hyperLogLogKey, data.uid)
 		ret, err := redisCli.Cmd("PFADD", hyperLogLogKey, data.uid, "EX", 86400).Int()
+
 		if err != nil {
 			log.Warningln("uvCounter check rids hyperloglog failed, ", err)
 		}
