@@ -11,9 +11,10 @@ import (
 	"encoding/hex"
 	"net/url"
 	"strings"
-
+	"github.com/mediocregopher/radix.v2/redis"
 	"github.com/mgutz/str"
 	"github.com/sirupsen/logrus"
+	"strconv"
 )
 
 const (
@@ -40,12 +41,16 @@ type digData struct {
 	ua    string
 }
 type urlData struct {
-	data digData
-	uid  string
+	data  digData
+	uid   string
+	unode urlNode
 }
 
 type urlNode struct {
-	unType string
+	unType string //nrlnode type  详情页 或者首页或者列表页
+	unRid  int    //urlnode request id  Resource ID 资源ID
+	unUrl  string //当前页面的url
+	unTime string //当前页面访问时间
 }
 
 type storageBlock struct {
@@ -55,10 +60,18 @@ type storageBlock struct {
 }
 
 var log = logrus.New()
+var redisCli redis.Client
 
 func init() {
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
+	redisCli, err := redis.Dial("tcp", "localhost:6379")
+	if err != nil {
+		log.Fatalln("Redis connect failed!")
+	} else {
+		defer redisCli.Close()
+	}
+
 }
 
 func main() {
@@ -106,7 +119,6 @@ func readFileLineByLine(params cmdParams, logChannel chan string) {
 	for {
 		line, err := bufferRead.ReadString('\n')
 		logChannel <- line
-		log.Infof("readFileLineByLine line:%d", count)
 		count++
 		if count%(1000*params.routineNum) == 0 {
 			log.Infof("readFileLineByLine line:%d", count)
@@ -126,7 +138,6 @@ func logConsumer(logChannel chan string, pvChannel, uvChannel chan urlData) erro
 	for logStr := range logChannel {
 		//切割日志字符串，扣出打点数据
 		data := cutLogFetchData(logStr)
-		log.Infof("logConsumer, data, refer:%s, url:%s", data.refer, data.url)
 		//uid
 		//说明课程中模拟生成uid， md5(refer+ua)
 		hasher := md5.New()
@@ -135,14 +146,40 @@ func logConsumer(logChannel chan string, pvChannel, uvChannel chan urlData) erro
 
 		//很多解析的功能可以放到这里...
 		uData := urlData{
-			data: data,
-			uid:  uid,
+			data:  data,
+			uid:   uid,
+			unode: formatUrl(data.url, data.time),
 		}
-		log.Infoln(uData)
 		pvChannel <- uData
 		uvChannel <- uData
 	}
 	return nil
+}
+
+func formatUrl(url, t string) urlNode {
+	//一定从量大的着手 详情页 movie
+	pos1 := str.IndexOf(url, HANDLE_MOVIE, 0)
+	if pos1 != -1 {
+		pos1 += len(HANDLE_MOVIE)
+		pos2 := str.IndexOf(url, HANDLE_HTML, pos1)
+		idStr := str.Substr(url, pos1, pos2-pos1)
+		unID, _ := strconv.Atoi(idStr)
+		return urlNode{
+			"movie", unID, url, t}
+	} else {
+		pos1 = str.IndexOf(url, HANDLE_LIST, 0)
+		if pos1 != -1 {
+			pos1 += len(HANDLE_LIST)
+			pos2 := str.IndexOf(url, HANDLE_HTML, pos1)
+			idStr := str.Substr(url, pos1, pos2-pos1)
+			unID, _ := strconv.Atoi(idStr)
+			return urlNode{
+				"list", unID, url, t}
+		} else { //首页
+			return urlNode{
+				"home", 0, url, t}
+		}
+	}
 }
 
 func cutLogFetchData(logStr string) digData {
@@ -151,8 +188,9 @@ func cutLogFetchData(logStr string) digData {
 	if pos1 == -1 {
 		return digData{}
 	}
+	pos1 += len(HANDLE_DIG)
 	pos2 := str.IndexOf(logStr, " HTTP/", pos1)
-	d := str.Substr(logStr, pos1+len(HANDLE_DIG), pos2-pos1-len(HANDLE_DIG))
+	d := str.Substr(logStr, pos1, pos2-pos1)
 	urlInfo, err := url.Parse("http://localhost/?" + d)
 	if err != nil {
 		return digData{}
@@ -167,12 +205,50 @@ func cutLogFetchData(logStr string) digData {
 
 }
 
+//pv 访问多少次
 func pvCounter(pvChannel chan urlData, storageChannel chan storageBlock) {
-
+	for data := range pvChannel {
+		sItem := storageBlock{
+			"pv", "ZINCREBY", data.unode,
+		}
+		storageChannel <- sItem
+	}
 }
 
+//user 需要去重
 func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock) {
+	for data := range uvChannel {
+		//Hyperloglog redis
+		hyperLogLogKey := "uv_hpll_" + getTime(data.data.time, "day")
+		ret, err := redisCli.Cmd("PFADD", hyperLogLogKey, data.uid, "EX", 86400).Int()
+		if err != nil {
+			log.Warningln("uvCounter check rids hyperloglog failed, ", err)
+		}
+		if ret != 1 { //说明已经存在了
+			continue
+		}
+		sItem := storageBlock{
+			"uv", "ZINCREBY", data.unode,
+		}
+		storageChannel <- sItem
+	}
+}
 
+func getTime(logTime, timeType string) string {
+	var item string
+	switch timeType {
+	case "day":
+		item = "20016-01-02"
+		break
+	case "hour":
+		item = "20016-01-02 15"
+		break
+	case "minute":
+		item = "20016-01-02 15:04"
+		break
+	}
+	t, _ := time.Parse(item, time.Now().Format(item))
+	return strconv.FormatInt(t.Unix(), 10)
 }
 
 func dataStorage(storageChannel chan storageBlock) {
