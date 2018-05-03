@@ -120,7 +120,7 @@ func logConsumer(logChannel chan string, pvChannel, uvChannel chan urlData) erro
 	for logStr := range logChannel {
 		//切割日志字符串，扣出打点数据
 		data := cutLogFetchData(logStr)
-
+		log.Infof("logConsumer, data:%v", data)
 		//uid
 		//说明课程中模拟生成uid， md5(refer+ua)
 		hasher := md5.New()
