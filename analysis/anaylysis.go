@@ -7,12 +7,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"strings"
-	"github.com/mgutz/str"
-	"net/url"
 	"crypto/md5"
 	"encoding/hex"
+	"net/url"
+	"strings"
+
+	"github.com/mgutz/str"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -151,8 +152,8 @@ func cutLogFetchData(logStr string) digData {
 		return digData{}
 	}
 	pos2 := str.IndexOf(logStr, " HTTP/", pos1)
-	d := str.Substr(logStr, pos1, pos2-pos1)
-	urlInfo, err := url.Parse("http://localhost?" + d)
+	d := str.Substr(logStr, pos1+len(HANDLE_DIG), pos2-pos1-len(HANDLE_DIG))
+	urlInfo, err := url.Parse("http://localhost/?" + d)
 	if err != nil {
 		return digData{}
 	}
