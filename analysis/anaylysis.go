@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	logFilePath = flag.String("logFilePath", "/application/nginx/logs/dig.log", "log file path")
+	logFilePath = flag.String("logFilePath", "/data/nginx/logs/dig.log", "log file path")
 	routineNum  = flag.Int("routineNum", 5, "consumer number by goroutine")
 	l           = flag.String("l", "/tmp/log/analysis.log", "runtime log")
 )
@@ -93,6 +93,7 @@ func readFileLineByLine(params cmdParams, logChannel chan string) {
 	for {
 		line, err := bufferRead.ReadString('\n')
 		logChannel <- line
+		log.Infof("readFileLineByLine line:%d", count)
 		count++
 		if count%(1000*params.routineNum) == 0 {
 			log.Infof("readFileLineByLine line:%d", count)
