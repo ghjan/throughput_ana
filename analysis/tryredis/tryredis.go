@@ -27,6 +27,7 @@ func main() {
 	hmget(redisClient)
 
 	hget(redisClient)
+	defer redisClient.Close()
 }
 func hget(client *redis.Client) {
 	// Issue a HGET command to retrieve the title for a specific album, and use
