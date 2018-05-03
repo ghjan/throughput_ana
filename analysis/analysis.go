@@ -246,21 +246,28 @@ func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock, redisPo
 	}
 }
 
-//time1 := time.Format("02/Jan/2006+15:04:05 +0000")
+//time2 := time.Format("2006-01-02 15:04:05 +0000")
 func getTime(logTime, timeType string) string {
 	var item string
 	switch timeType {
 	case "day":
-		item = "02/Jan/2006"
+		item = "2006-01-02"
 		break
 	case "hour":
-		item = "2006-01-02+15"
+		item = "2006-01-02 15"
 		break
 	case "min":
-		item = "2006-01-02+15:04"
+		item = "2006-01-02 15:04"
 		break
 	}
-	t, _ := time.Parse(item, logTime) //logTime
+	var t time.Time
+	if logTime == "" {
+		now := time.Now()
+		sNow := now.Format(item)
+		t, _ = time.Parse(item, sNow) //logTime
+	} else {
+		t, _ = time.Parse(item, strings.Replace(logTime[:len(item)], "+", " ", -1)) //logTime
+	}
 	return strconv.FormatInt(t.Unix(), 10)
 }
 
