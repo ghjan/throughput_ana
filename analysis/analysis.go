@@ -213,9 +213,7 @@ func cutLogFetchData(logStr string) digData {
 //pv 访问多少次
 func pvCounter(pvChannel chan urlData, storageChannel chan storageBlock) {
 	for data := range pvChannel {
-		sItem := storageBlock{
-			"pv", "ZINCREBY", data.unode,
-		}
+		sItem := storageBlock{"pv", "ZINCRBY", data.unode}
 		storageChannel <- sItem
 	}
 }
@@ -225,18 +223,16 @@ func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock) {
 	for data := range uvChannel {
 		//HyperLoglog redis
 		hyperLogLogKey := "uv_hpll_" + getTime(data.data.time, "day")
-		fmt.Printf("hyperLogLogKey:%s, uid:%s", hyperLogLogKey, data.uid)
+		fmt.Printf("hyperLogLogKey:%s, uid:%s\n", hyperLogLogKey, data.uid)
 		ret, err := redisCli.Cmd("PFADD", hyperLogLogKey, data.uid, "EX", 86400).Int()
 
 		if err != nil {
-			log.Warningln("uvCounter check rids hyperloglog failed, ", err)
+			log.Warningln("uvCounter check redis hyperloglog failed, ", err)
 		}
 		if ret != 1 { //说明已经存在了
 			continue
 		}
-		sItem := storageBlock{
-			"uv", "ZINCREBY", data.unode,
-		}
+		sItem := storageBlock{"uv", "ZINCRBY", data.unode}
 		storageChannel <- sItem
 	}
 }
@@ -245,13 +241,13 @@ func getTime(logTime, timeType string) string {
 	var item string
 	switch timeType {
 	case "day":
-		item = "20016-01-02"
+		item = "2006-01-02"
 		break
 	case "hour":
-		item = "20016-01-02 15"
+		item = "2006-01-02 15"
 		break
-	case "minute":
-		item = "20016-01-02 15:04"
+	case "min":
+		item = "2006-01-02 15:04"
 		break
 	}
 	t, _ := time.Parse(item, time.Now().Format(item))
