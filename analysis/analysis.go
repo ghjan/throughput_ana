@@ -103,7 +103,7 @@ func main() {
 
 	// redis pool
 	redisPool, err := pool.New("tcp", REDIS_ADDRESS, params.routineNum*2)
-	if err == nil {
+	if err != nil {
 		log.Fatalln("Redis pool created failed.")
 		panic(err)
 	} else {
