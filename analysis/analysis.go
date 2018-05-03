@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"strconv"
 	"fmt"
+	"github.com/mediocregopher/radix.v2/pool"
 )
 
 const (
@@ -23,6 +24,8 @@ const (
 	HANDLE_MOVIE = "/movie/"
 	HANDLE_LIST  = "/list/"
 	HANDLE_HTML  = ".html"
+
+	REDIS_ADDRESS = "127.0.0.1:6379"
 )
 
 var (
@@ -61,18 +64,17 @@ type storageBlock struct {
 }
 
 var log = logrus.New()
-var redisCli *redis.Client
 
 func init() {
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
 
-	c, err := dial()
-	if err != nil {
-		log.Fatalln("Redis connect failed!")
-	} else {
-		redisCli = c
-	}
+	//c, err := dial()
+	//if err != nil {
+	//	log.Fatalln("Redis connect failed!")
+	//} else {
+	//	redisCli = c
+	//}
 }
 
 func dial() (*redis.Client, error) {
@@ -98,6 +100,22 @@ func main() {
 	var pvChannel = make(chan urlData, params.routineNum)
 	var uvChannel = make(chan urlData, params.routineNum)
 	var storageChannel = make(chan storageBlock, params.routineNum)
+
+	// redis pool
+	redisPool, err := pool.New("tcp", REDIS_ADDRESS, params.routineNum*2)
+	if err == nil {
+		log.Fatalln("Redis pool created failed.")
+		panic(err)
+	} else {
+		//连接池在idle的时候回断开
+		go func() {
+			for {
+				redisPool.Cmd("PING")
+				time.Sleep(3 * time.Second)
+			}
+		}()
+	}
+
 	//日志消费者
 	go readFileLineByLine(params, logChannel)
 	//创建一组日志处理
@@ -106,11 +124,9 @@ func main() {
 	}
 	//创建PV UV 统计器
 	go pvCounter(pvChannel, storageChannel)
-	go uvCounter(uvChannel, storageChannel)
+	go uvCounter(uvChannel, storageChannel, redisPool)
 	//创建存储器
 	go dataStorage(storageChannel)
-
-	defer redisCli.Close()
 
 	time.Sleep(1000 * time.Minute)
 
@@ -223,12 +239,12 @@ func pvCounter(pvChannel chan urlData, storageChannel chan storageBlock) {
 }
 
 //user 需要去重
-func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock) {
+func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock, redisPool *pool.Pool) {
 	for data := range uvChannel {
 		//HyperLoglog redis
 		hyperLogLogKey := "uv_hpll_" + getTime(data.data.time, "day")
 		fmt.Printf("hyperLogLogKey:%s, uid:%s\n", hyperLogLogKey, data.uid)
-		ret, err := redisCli.Cmd("PFADD", hyperLogLogKey, data.uid, "EX", 86400).Int()
+		ret, err := redisPool.Cmd("PFADD", hyperLogLogKey, data.uid, "EX", 86400).Int()
 
 		if err != nil {
 			log.Warningln("uvCounter check redis hyperloglog failed, ", err)
