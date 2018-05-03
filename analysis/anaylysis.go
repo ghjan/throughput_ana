@@ -8,7 +8,14 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"strings"
+	"github.com/mgutz/str"
+	"net/url"
+	"crypto/md5"
+	"encoding/hex"
 )
+
+const HANDLE_DIG = `OPTIONS /dig?`
 
 var (
 	logFilePath = flag.String("logFilePath", "/data/nginx/logs/dig.log", "log file path")
@@ -109,7 +116,48 @@ func readFileLineByLine(params cmdParams, logChannel chan string) {
 	}
 }
 
-func logConsumer(logChannel chan string, pvChannel, uvChannel chan urlData) {
+func logConsumer(logChannel chan string, pvChannel, uvChannel chan urlData) error {
+	for logStr := range logChannel {
+		//切割日志字符串，扣出打点数据
+		data := cutLogFetchData(logStr)
+
+		//uid
+		//说明课程中模拟生成uid， md5(refer+ua)
+		hasher := md5.New()
+		hasher.Write([]byte(data.refer + data.ua))
+		uid := hex.EncodeToString(hasher.Sum(nil))
+
+		//很多解析的功能可以放到这里...
+		uData := urlData{
+			data: data,
+			uid:  uid,
+		}
+		log.Infoln(uData)
+		pvChannel <- uData
+		uvChannel <- uData
+	}
+	return nil
+}
+
+func cutLogFetchData(logStr string) digData {
+	logStr = strings.TrimSpace(logStr)
+	pos1 := str.IndexOf(logStr, HANDLE_DIG, 0)
+	if pos1 == -1 {
+		return digData{}
+	}
+	pos2 := str.IndexOf(logStr, " HTTP/", pos1)
+	d := str.Substr(logStr, pos1, pos2-pos1)
+	urlInfo, err := url.Parse("http://localhost?" + d)
+	if err != nil {
+		return digData{}
+	}
+	data := urlInfo.Query()
+	return digData{
+		time:  data.Get("time"),
+		url:   data.Get("url"),
+		refer: data.Get("refer"),
+		ua:    data.Get("ua"),
+	}
 
 }
 
