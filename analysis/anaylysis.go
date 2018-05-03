@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"flag"
-	"time"
-	"github.com/sirupsen/logrus"
+	"io"
 	"os"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -56,7 +59,7 @@ func main() {
 		defer logFd.Close()
 	}
 	log.Infoln("Exec start.")
-	log.Infoln("Params: logFilePath=%s， routineNum=%d", *logFilePath, params.routineNum)
+	log.Infof("Params: logFilePath=%s， routineNum=%d", *logFilePath, params.routineNum)
 
 	//初始化一些channel,用于数据传递
 	var logChannel = make(chan string, params.routineNum*3)
@@ -79,7 +82,30 @@ func main() {
 }
 
 func readFileLineByLine(params cmdParams, logChannel chan string) {
+	fd, err := os.Open(params.logFilePath)
+	if err != nil {
+		log.Warningf("readFileLineByLine cannot open file:%s", params.logFilePath)
+	}
+	defer fd.Close()
 
+	count := 0
+	bufferRead := bufio.NewReader(fd)
+	for {
+		line, err := bufferRead.ReadString('\n')
+		logChannel <- line
+		count++
+		if count%(1000*params.routineNum) == 0 {
+			log.Infof("readFileLineByLine line:%d", count)
+		}
+		if err != nil {
+			if err == io.EOF {
+				time.Sleep(3 * time.Second)
+				log.Infof("readFileLineByLine wait, readline:%d", count)
+			} else {
+				log.Warningf("readFileLineByLine read error, %v", err)
+			}
+		}
+	}
 }
 
 func logConsumer(logChannel chan string, pvChannel, uvChannel chan urlData) {
