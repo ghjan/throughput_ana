@@ -246,20 +246,21 @@ func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock, redisPo
 	}
 }
 
+//time1 := time.Format("02/Jan/2006+15:04:05 +0000")
 func getTime(logTime, timeType string) string {
 	var item string
 	switch timeType {
 	case "day":
-		item = "2006-01-02"
+		item = "02/Jan/2006"
 		break
 	case "hour":
-		item = "2006-01-02 15"
+		item = "2006-01-02+15"
 		break
 	case "min":
-		item = "2006-01-02 15:04"
+		item = "2006-01-02+15:04"
 		break
 	}
-	t, _ := time.Parse(item, time.Now().Format(item)) //logTime
+	t, _ := time.Parse(item, logTime) //logTime
 	return strconv.FormatInt(t.Unix(), 10)
 }
 
@@ -284,9 +285,9 @@ func dataStorage(storageChannel chan storageBlock, redisPool *pool.Pool) {
 			prefix + "day_" + getTime(block.unode.unTime, "day"),
 			prefix + "hour_" + getTime(block.unode.unTime, "hour"),
 			prefix + "min_" + getTime(block.unode.unTime, "min"),
-			prefix + block.unode.unType + "day_" + getTime(block.unode.unTime, "day"),
-			prefix + block.unode.unType + "hour_" + getTime(block.unode.unTime, "hour"),
-			prefix + block.unode.unType + "min_" + getTime(block.unode.unTime, "min"),
+			prefix + block.unode.unType + "_day_" + getTime(block.unode.unTime, "day"),
+			prefix + block.unode.unType + "_hour_" + getTime(block.unode.unTime, "hour"),
+			prefix + block.unode.unType + "_min_" + getTime(block.unode.unTime, "min"),
 		}
 
 		rowId := block.unode.unRid
