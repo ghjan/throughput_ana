@@ -9,14 +9,14 @@ import (
 
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
-	"github.com/mediocregopher/radix.v2/redis"
+
+	"github.com/mediocregopher/radix.v2/pool"
 	"github.com/mgutz/str"
 	"github.com/sirupsen/logrus"
-	"strconv"
-	"fmt"
-	"github.com/mediocregopher/radix.v2/pool"
 )
 
 const (
@@ -69,17 +69,6 @@ func init() {
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
 
-	//c, err := dial()
-	//if err != nil {
-	//	log.Fatalln("Redis connect failed!")
-	//} else {
-	//	redisCli = c
-	//}
-}
-
-func dial() (*redis.Client, error) {
-	client, err := redis.DialTimeout("tcp", "127.0.0.1:6379", 10*time.Second)
-	return client, err
 }
 
 func main() {
@@ -126,7 +115,7 @@ func main() {
 	go pvCounter(pvChannel, storageChannel)
 	go uvCounter(uvChannel, storageChannel, redisPool)
 	//创建存储器
-	go dataStorage(storageChannel)
+	go dataStorage(storageChannel, redisPool)
 
 	time.Sleep(1000 * time.Minute)
 
@@ -202,7 +191,7 @@ func formatUrl(url, t string) urlNode {
 				"list", unID, url, t}
 		} else { //首页
 			return urlNode{
-				"home", 0, url, t}
+				"home", 1, url, t}
 		}
 	}
 }
@@ -270,10 +259,42 @@ func getTime(logTime, timeType string) string {
 		item = "2006-01-02 15:04"
 		break
 	}
-	t, _ := time.Parse(item, time.Now().Format(item))
+	t, _ := time.Parse(item, time.Now().Format(item)) //logTime
 	return strconv.FormatInt(t.Unix(), 10)
 }
 
-func dataStorage(storageChannel chan storageBlock) {
+/*
+//详情页http://localhost/movie/1.html
+//网站-大分类-小分类-终极详情页面
+//movie:1 详情页面 pv++
+//movie这个分类 pv ++
 
+//列表页 http://localhost/list/21.html
+//网站-大分类-小分类
+//list:21  pv++
+//list pv ++
+ */
+func dataStorage(storageChannel chan storageBlock, redisPool *pool.Pool) {
+	for block := range storageChannel {
+		prefix := block.counterType + "_"
+		//逐层添加，加洋葱皮的过程
+		//维度： 天-小时-分钟
+		//层级：定级-大分类-小分类-终极详情页面
+		setKeys := []string{
+			prefix + "day_" + getTime(block.unode.unTime, "day"),
+			prefix + "hour_" + getTime(block.unode.unTime, "hour"),
+			prefix + "min_" + getTime(block.unode.unTime, "min"),
+			prefix + block.unode.unType + "day_" + getTime(block.unode.unTime, "day"),
+			prefix + block.unode.unType + "hour_" + getTime(block.unode.unTime, "hour"),
+			prefix + block.unode.unType + "min_" + getTime(block.unode.unTime, "min"),
+		}
+
+		rowId := block.unode.unRid
+		for _, key := range setKeys {
+			ret, err := redisPool.Cmd(block.storageModel, key, 1, rowId).Int()
+			if ret <= 0 || err != nil {
+				log.Errorln("DataStorage redis storage error.", block.storageModel, key, rowId)
+			}
+		}
+	}
 }
