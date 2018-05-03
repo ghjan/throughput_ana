@@ -61,16 +61,17 @@ type storageBlock struct {
 }
 
 var log = logrus.New()
-var redisCli redis.Client
+var redisCli *redis.Client
 
 func init() {
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
-	redisCli, err := dial()
+
+	c, err := dial()
 	if err != nil {
 		log.Fatalln("Redis connect failed!")
 	} else {
-		defer redisCli.Close()
+		redisCli = c
 	}
 }
 
@@ -109,7 +110,10 @@ func main() {
 	//创建存储器
 	go dataStorage(storageChannel)
 
+	defer redisCli.Close()
+
 	time.Sleep(1000 * time.Minute)
+
 }
 
 func readFileLineByLine(params cmdParams, logChannel chan string) {
