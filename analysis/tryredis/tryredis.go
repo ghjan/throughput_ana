@@ -11,18 +11,18 @@ const (
 	REDIS_ADDRESS = "localhost:6379"
 )
 
-var rredisCli redis.Client
+var redisCli redis.Client
 
 func init() {
-	conn, err := redis.Dial("tcp", REDIS_ADDRESS)
+	redisCli, err := redis.Dial("tcp", REDIS_ADDRESS)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Importantly, use defer to ensure the connection is always properly
 	// closed before exiting the main() function.
-	defer conn.Close()
-
+	defer redisCli.Close()
 }
+
 func main() {
 	hmset()
 	hmget()
@@ -32,29 +32,29 @@ func main() {
 func hget() {
 	// Issue a HGET command to retrieve the title for a specific album, and use
 	// the Str() helper method to convert the reply to a string.
-	title, err := rredisCli.Cmd("HGET", "album:1", "title").Str()
+	title, err := redisCli.Cmd("HGET", "album:1", "title").Str()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Similarly, get the artist and convert it to a string.
-	artist, err := rredisCli.Cmd("HGET", "album:1", "artist").Str()
+	artist, err := redisCli.Cmd("HGET", "album:1", "artist").Str()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// And the price as a float64...
-	price, err := rredisCli.Cmd("HGET", "album:1", "price").Float64()
+	price, err := redisCli.Cmd("HGET", "album:1", "price").Float64()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// And the number of likes as an integer.
-	likes, err := rredisCli.Cmd("HGET", "album:1", "likes").Int()
+	likes, err := redisCli.Cmd("HGET", "album:1", "likes").Int()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("%s by %s: £%.2f [%d likes]\n", title, artist, price, likes)
 }
 func hmget() {
-	resp := rredisCli.Cmd("HMGET", "album:1", "title", "artist", "price", "likes")
+	resp := redisCli.Cmd("HMGET", "album:1", "title", "artist", "price", "likes")
 	fmt.Println(resp.String())
 }
 func hmset() {
@@ -67,7 +67,7 @@ func hmset() {
 	// key, followed by the various hash fields and values).
 	//HMSET key field1 value1 field2 value2
 	//127.0.0.1:6379> HMSET album:1 title "Electric Ladyland" artist "Jimi Hendrix" price 4.95 likes 8
-	resp := rredisCli.Cmd("HMSET", "album:1", "title", "Electric Ladyland", "artist", "Jimi Hendrix", "price", 4.95, "likes", 8)
+	resp := redisCli.Cmd("HMSET", "album:1", "title", "Electric Ladyland", "artist", "Jimi Hendrix", "price", 4.95, "likes", 8)
 	// Check the Err field of the *Resp object for any errors.
 	if resp.Err != nil {
 		log.Fatal(resp.Err)
