@@ -282,6 +282,8 @@ func getTime(logTime, timeType string) string {
 //list:21  pv++
 //list pv ++
  */
+//redis
+// HBase(列式存储) 劣势：提前列簇声明清楚 不是很适合经常变化的中小企业  千万级每日PV需要考虑使用HBase
 func dataStorage(storageChannel chan storageBlock, redisPool *pool.Pool) {
 	for block := range storageChannel {
 		prefix := block.counterType + "_"
