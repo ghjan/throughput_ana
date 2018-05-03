@@ -33,7 +33,8 @@ func main() {
 		log.Fatal(resp.Err)
 	}
 
-	fmt.Printf("Electric Ladyland added! %d", resp.Int())
+	fmt.Println(resp.Int())
+	fmt.Println("Electric Ladyland added!")
 	resp = conn.Cmd("HMGET", "album:1", "title", "artist", "price", "likes")
-	fmt.Printf("Electric Ladyland got! %s", resp.String())
+	fmt.Println(resp.String())
 }
