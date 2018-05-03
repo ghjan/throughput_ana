@@ -25,11 +25,15 @@ func main() {
 	// is always the name of the Redis command (in this example HMSET),
 	// optionally followed by any necessary arguments (in this example the
 	// key, followed by the various hash fields and values).
+	//HMSET key field1 value1 field2 value2
+	//127.0.0.1:6379> HMSET album:1 title "Electric Ladyland" artist "Jimi Hendrix" price 4.95 likes 8
 	resp := conn.Cmd("HMSET", "album:1", "title", "Electric Ladyland", "artist", "Jimi Hendrix", "price", 4.95, "likes", 8)
 	// Check the Err field of the *Resp object for any errors.
 	if resp.Err != nil {
 		log.Fatal(resp.Err)
 	}
 
-	fmt.Println("Electric Ladyland added!")
+	fmt.Printf("Electric Ladyland added! %d", resp.Int())
+	resp = conn.Cmd("HMGET", "album:1", "title", "artist", "price", "likes")
+	fmt.Printf("Electric Ladyland got! %s", resp.String())
 }
