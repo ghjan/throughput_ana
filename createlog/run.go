@@ -105,7 +105,7 @@ func makeLog(currentUrl, referUrl, ua string) string {
 	u.Set("refer", referUrl)
 	u.Set("ua", ua)
 	paramsStr := u.Encode()
-	logTemplate := `localhost - - [{$time}] "OPTIONS /dig?{$paramsStr} 200 43 "-" {$ua} "-"`
+	logTemplate := `localhost - - [{$time}] "OPTIONS /dig?{$paramsStr} HTTP/1.1" 200 43 "-" {$ua} "-"`
 	log := strings.Replace(logTemplate, "{$time}", time1, -1)
 	log = strings.Replace(log, "{$paramsStr}", paramsStr, -1)
 	//log = strings.Replace(log, "{$currentUrl}", currentUrl, -1)

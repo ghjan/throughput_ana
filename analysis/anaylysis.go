@@ -15,7 +15,12 @@ import (
 	"encoding/hex"
 )
 
-const HANDLE_DIG = `OPTIONS /dig?`
+const (
+	HANDLE_DIG   = ` /dig?`
+	HANDLE_MOVIE = "/movie/"
+	HANDLE_LIST  = "/list/"
+	HANDLE_HTML  = ".html"
+)
 
 var (
 	logFilePath = flag.String("logFilePath", "/data/nginx/logs/dig.log", "log file path")
