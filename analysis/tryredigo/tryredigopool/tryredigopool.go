@@ -1,27 +1,55 @@
 package main
 
 import (
-	"fmt"
-
-	"encoding/json"
+	"flag"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
+	"fmt"
+	"encoding/json"
 )
 
 const (
 	MYKEY = "mykey"
 )
 
-func main() {
-	c, err := redis.Dial("tcp", "127.0.0.1:6379")
-	if err != nil {
-		fmt.Println("Connect to redis error", err)
-		return
+func newPool(server, password string) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     3,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", server)
+			if err != nil {
+				return nil, err
+			}
+			if _, err := c.Do("AUTH", password); err != nil {
+				c.Close()
+				return nil, err
+			}
+			return c, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
 	}
+}
+
+var (
+	pool          *redis.Pool
+	redisServer   = flag.String("redisServer", ":6379", "")
+	redisPassword = flag.String("redisPassword", "", "")
+)
+
+func main() {
+	flag.Parse()
+	pool = newPool(*redisServer, *redisPassword)
+	// 从池里获取连接
+	c := pool.Get()
+	// 用完后将连接放回连接池
 	defer c.Close()
 
-	err = test1(c)
+	err := test1(c)
 	if err != nil {
 		fmt.Println("test1 error", err)
 	}
