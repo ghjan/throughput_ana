@@ -233,6 +233,7 @@ func uvCounter(uvChannel chan urlData, storageChannel chan storageBlock, redisPo
 		//HyperLoglog redis
 		hyperLogLogKey := "uv_hpll_" + getTime(data.data.time, "day")
 		fmt.Printf("hyperLogLogKey:%s, uid:%s\n", hyperLogLogKey, data.uid)
+		//ex 3600*24=86400 正好一天过期
 		ret, err := redisPool.Cmd("PFADD", hyperLogLogKey, data.uid, "EX", 86400).Int()
 
 		if err != nil {
