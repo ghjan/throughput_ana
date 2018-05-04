@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
-	"fmt"
 	"encoding/json"
+	"fmt"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 const (
