@@ -124,11 +124,11 @@ func test2(c redis.Conn) (err error) {
 	username, err = redis.String(c.Do("GET", MYKEY))
 	if err != nil {
 		fmt.Println("redis get failed:", err)
+		return nil
 	} else {
 		fmt.Printf("Get mykey: %v \n", username)
+		return errors.New("redis should not existes because of time out")
 	}
-	return err
-
 }
 
 //test3 检测值是否存在  EXISTS key
@@ -169,10 +169,11 @@ func test4(c redis.Conn) (err error) {
 	username, err = redis.String(c.Do("GET", MYKEY))
 	if err != nil {
 		fmt.Println("redis get failed:", err)
+		return nil
 	} else {
 		fmt.Printf("Get mykey: %v \n", username)
+		return errors.New("redis should get failed because of deleted just now")
 	}
-	return err
 }
 
 //test5  读写json到redis
