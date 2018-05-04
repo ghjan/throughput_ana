@@ -15,6 +15,32 @@ const (
 	MYKEY = "mykey"
 )
 
+/*
+配置场景
+再来看下主要参数
+
+MaxIdle
+表示连接池空闲连接列表的长度限制
+空闲列表是一个栈式的结构，先进后出
+MaxActive
+表示连接池中最大连接数限制
+主要考虑到服务端支持的连接数上限，以及应用之间”瓜分”连接数
+IdleTimeout
+空闲连接的超时设置，一旦超时，将会从空闲列表中摘除
+该超时时间时间应该小于服务端的连接超时设置
+
+区分两种使用场景：
+
+高频调用的场景，需要尽量压榨redis的性能：
+调高MaxIdle的大小，该数目小于maxActive，由于作为一个缓冲区一样的存在，扩大缓冲区自然没有问题
+调高MaxActive，考虑到服务端的支持上限，尽量调高
+IdleTimeout由于是高频使用场景，设置短一点也无所谓，需要注意的一点是MaxIdle设置的长了，队列中的过期连接可能会增多，这个时候IdleTimeout也要相应变化
+低频调用的场景，调用量远未达到redis的负载，稳定性为重：
+MaxIdle可以设置的小一些
+IdleTimeout相应地设置小一些
+MaxActive随意，够用就好，容易检测到异常
+ */
+
 func newPool(server, password string) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     3,
